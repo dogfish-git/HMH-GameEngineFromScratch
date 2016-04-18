@@ -18,5 +18,13 @@
     <ClCompile Include="win32_HMH.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="general_HMH.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="general_HMH.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

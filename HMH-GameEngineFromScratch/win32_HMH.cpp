@@ -1,8 +1,15 @@
-#include <Windows.h>
+
 #include <stdint.h>
+
+#include "general_HMH.h"
+#include "general_HMH.cpp"
+
+#include <Windows.h>
 #include <Xinput.h>
 #include <dsound.h>
 #include <math.h>
+
+
 
 static bool stillRunning = false;
 static bool soundIsPlaying = false;
@@ -49,7 +56,7 @@ struct sinWaveVariablesStruct
 	int period = SamplesPerSecond / Hz;
 	int volume = 3000;
 	float tSinLoc = 0;
-	int latencySampleCount = SamplesPerSecond / 15;
+	int latencySampleCount = SamplesPerSecond / 30;
 };
 
 static LPDIRECTSOUNDBUFFER win32_initDSound(HWND winHandle, int SamplesPerSecond, int BitsPerSample, int BufferSize)
@@ -302,7 +309,7 @@ void win32_WM_PAINT_funtion (HWND window, win32_BitmapBufferStruct bitmapBuffer)
 	EndPaint(window, &paint);
 }
 
-void gradient(HWND window, int xOffset, int yOffset, win32_BitmapBufferStruct bitmapBuffer)
+void gradient(HWND window, win32_BitmapBufferStruct bitmapBuffer, general_bitmapBufferStruct *general_bitmapBuffer)
 {
 	HDC deviceContext = GetDC(window);
 
@@ -312,34 +319,16 @@ void gradient(HWND window, int xOffset, int yOffset, win32_BitmapBufferStruct bi
 	int winWidth = clientRect.right - clientRect.left;
 	int winHeight = clientRect.bottom - clientRect.top;
 
-	int pitch = bitmapBuffer.width * bitmapBuffer.bytesPerPixel;
-	uint8_t *row = (uint8_t *)bitmapBuffer.bitMemory;
-
-	for (int y = 0; y < bitmapBuffer.height; y++)
-	{
-		uint32_t *pixel = (uint32_t *)row;
-		for (int x = 0; x < bitmapBuffer.width; x++)
-		{
-			uint8_t red = x + xOffset;
-			uint8_t green = y + yOffset;
-			uint8_t blue = x + y;
-
-			*pixel = (red << 16 | green << 8 | blue);
-			pixel++;
-		}
-		row += pitch;
-	}
-
 	StretchDIBits(deviceContext,
 		0,
 		0,
-		bitmapBuffer.width,
-		bitmapBuffer.height,
+		general_bitmapBuffer->width,
+		general_bitmapBuffer->height,
 		0,
 		0,
 		winWidth,
 		winHeight,
-		bitmapBuffer.bitMemory,
+		general_bitmapBuffer->bitMemory,
 		&bitmapBuffer.info,
 		DIB_RGB_COLORS,
 		SRCCOPY
@@ -347,6 +336,7 @@ void gradient(HWND window, int xOffset, int yOffset, win32_BitmapBufferStruct bi
 
 	ReleaseDC(window, deviceContext);
 }
+
 
 LRESULT CALLBACK windowsProc(HWND windowHandle,
 	UINT message,
@@ -456,8 +446,8 @@ int CALLBACK WinMain(HINSTANCE handle,
 			QueryPerformanceCounter(&lastCounter);
 			uint64_t lastCycleCount = __rdtsc();
 
-			int xOffset = 0;
-			int yOffset = 0;
+			int redOffset = 0;
+			int greenOffset = 0;
 
 			stillRunning = true;
 			win32_getXInputLib();
@@ -474,10 +464,21 @@ int CALLBACK WinMain(HINSTANCE handle,
 					TranslateMessage(&message);
 					DispatchMessageA(&message);
 				}
+				general_bitmapBufferStruct generalBuffer = {};
+
+				generalBuffer.bitMemory = win32_globalBitmapBuffer.bitMemory;
+				generalBuffer.width = win32_globalBitmapBuffer.width;
+				generalBuffer.height = win32_globalBitmapBuffer.height;
+				generalBuffer.bytesPerPixel = win32_globalBitmapBuffer.bytesPerPixel;
+				generalBuffer.pitch = win32_globalBitmapBuffer.pitch;
+
+				general_game_update(&generalBuffer, redOffset, greenOffset);
+
+
 				win32_playSoundSinWave(soundBuffer, &sinStruct);
-				gradient(winHandle, xOffset, yOffset, win32_globalBitmapBuffer);
-				xOffset++;
-				yOffset++;
+				gradient(winHandle, win32_globalBitmapBuffer, &generalBuffer);
+				redOffset++;
+				greenOffset++;
 				win32_xInputControls();
 
 
